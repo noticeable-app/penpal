@@ -17,6 +17,16 @@ type Options = {
    */
   iframe: HTMLIFrameElement;
   /**
+   * The interval that defines how often Penpal checks for iframe removal.
+   * This feature is enabled by default and prevents memory leaks when
+   * the iframe is removed from its parent but the consumer hasn't
+   * called `destroy()`.
+   *
+   * The default value is `60000` ms. A value of `0` disables iframe
+   * removal monitoring.
+   */
+  iframeRemovalMonitoringInterval?: number;
+  /**
    * Methods that may be called by the iframe.
    */
   methods?: Methods;
@@ -41,7 +51,7 @@ type Options = {
  * Attempts to establish communication with an iframe.
  */
 export default <TCallSender extends object = CallSender>(options: Options): Connection<TCallSender> => {
-  let { iframe, methods = {}, childOrigin, timeout, debug = false } = options;
+  let { iframe, iframeRemovalMonitoringInterval = undefined, methods = {}, childOrigin, timeout, debug = false } = options;
 
   const log = createLogger(debug);
   const destructor = createDestructor();
@@ -96,7 +106,7 @@ export default <TCallSender extends object = CallSender>(options: Options): Conn
     window.addEventListener(NativeEventType.Message, handleMessage);
 
     log('Parent: Awaiting handshake');
-    monitorIframeRemoval(iframe, destructor);
+    monitorIframeRemoval(iframe, destructor, iframeRemovalMonitoringInterval);
 
     onDestroy((error?: PenpalError) => {
       window.removeEventListener(NativeEventType.Message, handleMessage);
